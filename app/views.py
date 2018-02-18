@@ -6,7 +6,7 @@ This file creates your application.
 """
 import os
 from app import app
-from flask import render_template, request, redirect, url_for, flash, session, abort, jsonify
+from flask import render_template, request, redirect, url_for, flash, session, abort
 from werkzeug.utils import secure_filename
 
 
@@ -25,22 +25,23 @@ def about():
     """Render the website's about page."""
     return render_template('about.html', name="Mary Jane")
 
-@app.route('/add-file', methods=['POST', 'GET'])
-def add_file():
+
+@app.route('/upload', methods=['POST', 'GET'])
+def upload():
     if not session.get('logged_in'):
         abort(401)
 
-    file_folder = ''
+    # Instantiate your form class
 
+    # Validate file upload on submit
     if request.method == 'POST':
-        file = request.files['file']
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(file_folder, filename))
+        # Get file data and save to your uploads folder
 
-        flash('File Saved')
+        flash('File Saved', 'success')
         return redirect(url_for('home'))
 
-    return render_template('add_file.html')
+    return render_template('upload.html')
+
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -51,20 +52,30 @@ def login():
         else:
             session['logged_in'] = True
             
-            flash('You were logged in')
-            return redirect(url_for('add_file'))
+            flash('You were logged in', 'success')
+            return redirect(url_for('upload'))
     return render_template('login.html', error=error)
+
 
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
-    flash('You were logged out')
+    flash('You were logged out', 'success')
     return redirect(url_for('home'))
 
 
 ###
 # The functions below should be applicable to all Flask apps.
 ###
+
+# Flash errors from the form if validation fails
+def flash_errors(form):
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(u"Error in the %s field - %s" % (
+                getattr(form, field).label.text,
+                error
+), 'danger')
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):
@@ -91,4 +102,4 @@ def page_not_found(error):
 
 
 if __name__ == '__main__':
-    app.run(debug=True,host="0.0.0.0",port="8080")
+    app.run(debug=True, host="0.0.0.0", port="8080")
