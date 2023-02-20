@@ -1,13 +1,10 @@
-"""
-Flask Documentation:     http://flask.pocoo.org/docs/
-Jinja2 Documentation:    http://jinja.pocoo.org/2/documentation/
-Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
-This file creates your application.
-"""
 import os
-from app import app
+from app import app, db, login_manager
 from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
+from app.models import UserProfile
+from app.forms import LoginForm
 
 
 ###
@@ -28,41 +25,45 @@ def about():
 
 @app.route('/upload', methods=['POST', 'GET'])
 def upload():
-    if not session.get('logged_in'):
-        abort(401)
-
     # Instantiate your form class
 
     # Validate file upload on submit
-    if request.method == 'POST':
+    if form.validate_on_submit():
         # Get file data and save to your uploads folder
 
         flash('File Saved', 'success')
-        return redirect(url_for('home'))
+        return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
 
     return render_template('upload.html')
 
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
-    error = None
-    if request.method == 'POST':
-        if request.form['username'] != app.config['ADMIN_USERNAME'] or request.form['password'] != app.config['ADMIN_PASSWORD']:
-            error = 'Invalid username or password'
-        else:
-            session['logged_in'] = True
-            
-            flash('You were logged in', 'success')
-            return redirect(url_for('upload'))
-    return render_template('login.html', error=error)
+    form = LoginForm()
 
+    # change this to actually validate the entire form submission
+    # and not just one field
+    if form.username.data:
+        # Get the username and password values from the form.
 
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    flash('You were logged out', 'success')
-    return redirect(url_for('home'))
+        # Using your model, query database for a user based on the username
+        # and password submitted. Remember you need to compare the password hash.
+        # You will need to import the appropriate function to do so.
+        # Then store the result of that query to a `user` variable so it can be
+        # passed to the login_user() method below.
 
+        # Gets user id, load into session
+        login_user(user)
+
+        # Remember to flash a message to the user
+        return redirect(url_for("home"))  # The user should be redirected to the upload form instead
+    return render_template("login.html", form=form)
+
+# user_loader callback. This callback is used to reload the user object from
+# the user ID stored in the session
+@login_manager.user_loader
+def load_user(id):
+    return db.session.execute(db.select(UserProfile).filter_by(id=id)).scalar()
 
 ###
 # The functions below should be applicable to all Flask apps.
@@ -99,7 +100,3 @@ def add_header(response):
 def page_not_found(error):
     """Custom 404 page."""
     return render_template('404.html'), 404
-
-
-if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port="8080")
